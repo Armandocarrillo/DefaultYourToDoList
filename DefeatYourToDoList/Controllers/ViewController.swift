@@ -1,30 +1,3 @@
-/// Copyright (c) 2018 Razeware LLC
-///
-/// Permission is hereby granted, free of charge, to any person obtaining a copy
-/// of this software and associated documentation files (the "Software"), to deal
-/// in the Software without restriction, including without limitation the rights
-/// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-/// copies of the Software, and to permit persons to whom the Software is
-/// furnished to do so, subject to the following conditions:
-///
-/// The above copyright notice and this permission notice shall be included in
-/// all copies or substantial portions of the Software.
-///
-/// Notwithstanding the foregoing, you may not use, copy, modify, merge, publish,
-/// distribute, sublicense, create a derivative work, and/or sell copies of the
-/// Software in any work that is designed, intended, or marketed for pedagogical or
-/// instructional purposes related to programming, coding, application development,
-/// or information technology.  Permission for such use, copying, modification,
-/// merger, publication, distribution, sublicensing, creation of derivative works,
-/// or sale is expressly withheld.
-///
-/// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-/// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-/// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-/// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-/// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-/// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-/// THE SOFTWARE.
 
 import UIKit
 
@@ -36,8 +9,8 @@ class ViewController: UIViewController {
   @IBOutlet var warriorCatImageView: UIImageView!
 
   // MARK: - Properties
-  var toDos: [ToDoItem] = []
-  var completedToDos: [ToDoItem] = []
+  var toDos: [ToDo] = []
+  var completedToDos: [ToDo] = []
 
   // MARK: - View Life Cycle
   override func viewDidLoad() {
@@ -61,6 +34,10 @@ extension ViewController {
     })
 
     present(controller, animated: true)
+    
+    controller.addAction(UIAlertAction(title: "Task with Checklist", style: .default) { [weak self] _ in
+      self?.createTaskWithChecklist()
+    })
   }
 }
 
@@ -110,6 +87,47 @@ extension ViewController {
 
     present(controller, animated: true)
   }
+  
+  func createTaskWithChecklist() {
+    let controller = UIAlertController(title: "Task Name", message: "", preferredStyle: .alert)
+    
+    controller.addTextField { textField in textField.placeholder = "Enter Task Title"
+    }
+    
+    for _ in 1...4 {
+      controller.addTextField { textField in
+        textField.placeholder = "Add Subtask"
+      }
+    }
+    let saveAction = UIAlertAction(title: "Save", style: .default) {
+      [weak self] alert in
+      
+      let titleTextField = controller.textFields! [0]
+      let firstTextField = controller.textFields! [1]
+      let secondTextField = controller.textFields! [2]
+      let thirdTextField = controller.textFields! [3]
+      let fourthTextField = controller.textFields! [4]
+      
+      let textFields = [firstTextField, secondTextField, thirdTextField, fourthTextField]
+      
+      var subtask: [ToDo] = []
+      
+      for textField in textFields where textField.text != "" {
+        subtask.append(ToDoItem(name: textField.text!))
+      }
+      
+      let currentToDo = ToDoItemWithCheckList(name: titleTextField.text!, subtask: subtask)
+      self?.toDos.append(currentToDo)
+      self?.toDoListCollectionView.reloadData()
+      self?.setWarriorPosition()
+    }
+    
+    let cancelAction = UIAlertAction(title: "Cancel", style: .default)
+    controller.addAction(saveAction)
+    controller.addAction(cancelAction)
+    
+    present(controller, animated: true)
+  }
 }
 
 // MARK: - UICollectionViewDataSource
@@ -133,6 +151,11 @@ extension ViewController: UICollectionViewDataSource {
     }
 
     cell.layoutSubviews()
+    
+    if currentToDo is ToDoItemWithCheckList{
+      cell.subtasks = currentToDo.subtask
+    }
+    
     return cell
   }
 }
@@ -141,7 +164,7 @@ extension ViewController: UICollectionViewDataSource {
 extension ViewController: UICollectionViewDelegate {
 
   func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-    let currentToDo = toDos[indexPath.row]
+    var currentToDo = toDos[indexPath.row]
 
     if currentToDo.isComplete {
       currentToDo.isComplete = false
@@ -162,8 +185,14 @@ extension ViewController: UICollectionViewDelegateFlowLayout {
   func collectionView(_ collectionView: UICollectionView,
                       layout collectionViewLayout: UICollectionViewLayout,
                       sizeForItemAt indexPath: IndexPath) -> CGSize {
-    let width = collectionView.frame.width    
-    let height = collectionView.frame.height * 0.15
+    let width = collectionView.frame.width
+    
+    let currentToDo = toDos[indexPath.row]
+    
+    let heightVariance = 60 * (currentToDo.subtask.count)
+    let addedHeight = CGFloat(heightVariance)
+        
+    let height = collectionView.frame.height * 0.15 + addedHeight
     
     return CGSize(width: width, height: height)
   }
